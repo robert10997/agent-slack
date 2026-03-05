@@ -2,7 +2,11 @@ type InlineStyle = { bold?: true; italic?: true; strike?: true; code?: true };
 
 type InlineElement =
   | { type: "text"; text: string; style?: InlineStyle }
-  | { type: "link"; url: string; text?: string; style?: InlineStyle };
+  | { type: "link"; url: string; text?: string; style?: InlineStyle }
+  | { type: "user"; user_id: string }
+  | { type: "channel"; channel_id: string }
+  | { type: "usergroup"; usergroup_id: string }
+  | { type: "broadcast"; range: string };
 
 type RichTextElement =
   | { type: "rich_text_section"; elements: InlineElement[] }
@@ -56,9 +60,28 @@ export function parseInlineElements(text: string): InlineElement[] {
     } else if (strike != null) {
       elements.push({ type: "text", text: strike, style: { strike: true } });
     } else if (linkUrl != null && linkText != null) {
-      elements.push({ type: "link", url: linkUrl, text: linkText });
+      // <#C123|channel-name> → channel mention
+      if (/^#[A-Z0-9]+$/.test(linkUrl)) {
+        elements.push({ type: "channel", channel_id: linkUrl.slice(1) });
+      } else if (/^!subteam\^[A-Z0-9]+$/.test(linkUrl)) {
+        // <!subteam^S123|@group> → usergroup mention
+        elements.push({ type: "usergroup", usergroup_id: linkUrl.split("^")[1]! });
+      } else {
+        elements.push({ type: "link", url: linkUrl, text: linkText });
+      }
     } else if (bareUrl != null) {
-      elements.push({ type: "link", url: bareUrl });
+      // <@U123> → user mention
+      if (/^@[A-Z0-9]+$/.test(bareUrl)) {
+        elements.push({ type: "user", user_id: bareUrl.slice(1) });
+      } else if (/^!subteam\^[A-Z0-9]+$/.test(bareUrl)) {
+        // <!subteam^S123> → usergroup mention
+        elements.push({ type: "usergroup", usergroup_id: bareUrl.split("^")[1]! });
+      } else if (/^!(here|channel|everyone)$/.test(bareUrl)) {
+        // <!here>, <!channel>, <!everyone> → broadcast
+        elements.push({ type: "broadcast", range: bareUrl.slice(1) });
+      } else {
+        elements.push({ type: "link", url: bareUrl });
+      }
     }
 
     lastIndex = match.index + match[0].length;

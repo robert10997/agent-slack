@@ -47,6 +47,52 @@ describe("parseInlineElements", () => {
       { type: "link", url: "https://example.com" },
     ]);
   });
+
+  test("<@U123> is parsed as user mention", () => {
+    expect(parseInlineElements("ping <@U123ABC>")).toEqual([
+      { type: "text", text: "ping " },
+      { type: "user", user_id: "U123ABC" },
+    ]);
+  });
+
+  test("<#C123|channel> is parsed as channel mention", () => {
+    expect(parseInlineElements("see <#C0G9QF9GW|general>")).toEqual([
+      { type: "text", text: "see " },
+      { type: "channel", channel_id: "C0G9QF9GW" },
+    ]);
+  });
+
+  test("<!here> is parsed as broadcast", () => {
+    expect(parseInlineElements("<!here> heads up")).toEqual([
+      { type: "broadcast", range: "here" },
+      { type: "text", text: " heads up" },
+    ]);
+  });
+
+  test("<!channel> is parsed as broadcast", () => {
+    expect(parseInlineElements("<!channel> alert")).toEqual([
+      { type: "broadcast", range: "channel" },
+      { type: "text", text: " alert" },
+    ]);
+  });
+
+  test("<!everyone> is parsed as broadcast", () => {
+    expect(parseInlineElements("<!everyone>")).toEqual([{ type: "broadcast", range: "everyone" }]);
+  });
+
+  test("<!subteam^S123> is parsed as usergroup mention", () => {
+    expect(parseInlineElements("notify <!subteam^S123>")).toEqual([
+      { type: "text", text: "notify " },
+      { type: "usergroup", usergroup_id: "S123" },
+    ]);
+  });
+
+  test("<!subteam^S123|@team> is parsed as usergroup mention", () => {
+    expect(parseInlineElements("cc <!subteam^S04F2M3GE|@team-eng>")).toEqual([
+      { type: "text", text: "cc " },
+      { type: "usergroup", usergroup_id: "S04F2M3GE" },
+    ]);
+  });
 });
 
 describe("textToRichTextBlocks", () => {
@@ -118,5 +164,37 @@ describe("textToRichTextBlocks", () => {
     const result = textToRichTextBlocks("- Item\n> quoted text")!;
     expect(result).not.toBeNull();
     expect(result[0]!.elements.find((e) => e.type === "rich_text_quote")).toBeDefined();
+  });
+
+  test("user mentions in list items are preserved", () => {
+    const result = textToRichTextBlocks("- ping <@U123>\n- notify <@U456>")!;
+    expect(result).not.toBeNull();
+    const list = result[0]!.elements.find((e) => e.type === "rich_text_list") as {
+      elements: { elements: unknown[] }[];
+    };
+    expect(list.elements[0]!.elements).toEqual([
+      { type: "text", text: "ping " },
+      { type: "user", user_id: "U123" },
+    ]);
+    expect(list.elements[1]!.elements).toEqual([
+      { type: "text", text: "notify " },
+      { type: "user", user_id: "U456" },
+    ]);
+  });
+
+  test("channel mentions and broadcasts in list items are preserved", () => {
+    const result = textToRichTextBlocks("- post in <#C123|general>\n- <!here> check this")!;
+    expect(result).not.toBeNull();
+    const list = result[0]!.elements.find((e) => e.type === "rich_text_list") as {
+      elements: { elements: unknown[] }[];
+    };
+    expect(list.elements[0]!.elements).toEqual([
+      { type: "text", text: "post in " },
+      { type: "channel", channel_id: "C123" },
+    ]);
+    expect(list.elements[1]!.elements).toEqual([
+      { type: "broadcast", range: "here" },
+      { type: "text", text: " check this" },
+    ]);
   });
 });
