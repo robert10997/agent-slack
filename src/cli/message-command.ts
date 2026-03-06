@@ -153,11 +153,12 @@ export function registerMessageCommand(input: { program: Command; ctx: CliContex
       "Workspace selector (full URL or unique substring; needed when using #channel/channel id across multiple workspaces)",
     )
     .option("--thread-ts <ts>", "Thread root ts to post into (optional)")
+    .option("--attach <path>", "Attach a local file path (repeatable)", collectOptionValue, [])
     .action(async (...args) => {
       const [targetInput, text, options] = args as [
         string,
         string,
-        { workspace?: string; threadTs?: string },
+        { workspace?: string; threadTs?: string; attach?: string[] },
       ];
       try {
         const payload = await sendMessage({
