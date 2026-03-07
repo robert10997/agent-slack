@@ -11,8 +11,10 @@ if (["patch", "minor", "major"].includes(versionArg)) {
   console.log(semver.inc(currentVersion, versionArg));
   process.exit(0);
 }
-if (["patch-rc", "minor-rc", "major-rc"].includes(versionArg)) {
-  const bumpType = versionArg.replace("-rc", "");
+// "rc" alone defaults to patch-rc
+const rcArg = versionArg === "rc" ? "patch-rc" : versionArg;
+if (["patch-rc", "minor-rc", "major-rc"].includes(rcArg)) {
+  const bumpType = rcArg.replace("-rc", "");
   const parsed = semver.parse(currentVersion);
   const isRc = parsed.prerelease.length > 0 && parsed.prerelease[0] === "rc";
   if (isRc) {
