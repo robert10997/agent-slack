@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
+import { isRecord } from "./object-type-guards.ts";
 
 export async function readJsonFile<T>(path: string): Promise<T | null> {
   try {
@@ -20,8 +21,4 @@ export async function readJsonFile<T>(path: string): Promise<T | null> {
 export async function writeJsonFile(path: string, data: unknown): Promise<void> {
   await mkdir(dirname(path), { recursive: true });
   await writeFile(path, `${JSON.stringify(data, null, 2)}\n`, { mode: 0o600 });
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
 }
