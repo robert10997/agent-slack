@@ -496,7 +496,9 @@ export async function extractFromSlackDesktop(): Promise<DesktopExtracted> {
         source: { leveldb_path: leveldbDir, cookies_path: cookiesDb },
       };
     } catch (err: unknown) {
-      errors.push(`${baseDir}: ${err instanceof Error ? err.message : String(err)}`);
+      const msg = err instanceof Error ? err.message : String(err);
+      errors.push(`${baseDir}: ${msg}`);
+      process.stderr.write(`[auth] Skipping ${baseDir}: ${msg}\n`);
     }
   }
 
