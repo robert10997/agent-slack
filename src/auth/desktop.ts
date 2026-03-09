@@ -263,32 +263,25 @@ async function extractTeamsFromSlackLevelDb(leveldbDir: string): Promise<Desktop
 
 function getSafeStoragePasswords(prefix: string): string[] {
   if (IS_MACOS) {
-    const passwords: string[] = [];
-
     // Electron ("Slack Key") and Mac App Store ("Slack App Store Key") builds
     // store separate Safe Storage passwords under the same service name.
-    // Query each known account explicitly so we collect all passwords.
-    const slackAccounts = ["Slack Key", "Slack App Store Key"];
-    for (const acct of slackAccounts) {
+    // Query each known account explicitly, then fall back to service-only
+    // lookups to catch unknown account names.
+    const keychainQueries: { service: string; account?: string }[] = [
+      { service: "Slack Safe Storage", account: "Slack Key" },
+      { service: "Slack Safe Storage", account: "Slack App Store Key" },
+      { service: "Slack Safe Storage" },
+      { service: "Chrome Safe Storage" },
+      { service: "Chromium Safe Storage" },
+    ];
+    const passwords: string[] = [];
+    for (const q of keychainQueries) {
       try {
-        const out = execFileSync(
-          "security",
-          ["find-generic-password", "-w", "-s", "Slack Safe Storage", "-a", acct],
-          { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
-        ).trim();
-        if (out) {
-          passwords.push(out);
+        const args = ["-w", "-s", q.service];
+        if (q.account) {
+          args.push("-a", q.account);
         }
-      } catch {
-        // continue
-      }
-    }
-
-    // Fallback: service-only lookup catches unknown account names
-    const services = ["Slack Safe Storage", "Chrome Safe Storage", "Chromium Safe Storage"];
-    for (const service of services) {
-      try {
-        const out = execFileSync("security", ["find-generic-password", "-w", "-s", service], {
+        const out = execFileSync("security", ["find-generic-password", ...args], {
           encoding: "utf8",
           stdio: ["ignore", "pipe", "ignore"],
         }).trim();
