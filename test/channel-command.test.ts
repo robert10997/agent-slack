@@ -280,6 +280,31 @@ describe("channel mark command", () => {
     expect(process.exitCode).toBe(1);
   });
 
+  test("URL target rejects --ts flag", async () => {
+    const { ctx } = createContext();
+    const program = new Command();
+    registerChannelCommand({ program, ctx });
+    const err = mock(() => {});
+    console.error = err as typeof console.error;
+
+    await program.parseAsync(
+      [
+        "channel",
+        "mark",
+        "https://workspace.slack.com/archives/C12345/p1234567890123456",
+        "--ts",
+        "9999999999.999999",
+      ],
+      { from: "user" },
+    );
+
+    expect(err).toHaveBeenCalled();
+    expect(String((err as ReturnType<typeof mock>).mock.calls[0]?.[0])).toContain(
+      "--ts cannot be used with a URL target",
+    );
+    expect(process.exitCode).toBe(1);
+  });
+
   test("channel target with --ts calls conversations.mark", async () => {
     const { ctx, calls } = createContext();
     const program = new Command();
